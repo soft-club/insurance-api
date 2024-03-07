@@ -1,718 +1,1636 @@
----
-swagger: "2.0"
+openapi: 3.0.3
 info:
-  description: "This is a sample server Petstore server.  You can find out more about\
-    \ Swagger at [http://swagger.io](http://swagger.io) or on [irc.freenode.net, #swagger](http://swagger.io/irc/).\
-    \  For this sample, you can use the api key `special-key` to test the authorization\
-    \ filters."
-  version: "1.0.5"
-  title: "Swagger Petstore"
-  termsOfService: "http://swagger.io/terms/"
+  title: Swagger Insurance integration
+  description: >-
+    Сервер интеграции страховых компаний с банками, основанный на спецификации
+    OpenAPI 3.0.
+  termsOfService: https://swagger.io/terms/
   contact:
-    email: "apiteam@swagger.io"
-  license:
-    name: "Apache 2.0"
-    url: "http://www.apache.org/licenses/LICENSE-2.0.html"
-host: "petstore.swagger.io"
-basePath: "/v2"
+    email: surat.sadikov1989@gmail.com
+  version: 1.2.1
+servers:
+  - url: https://localhost
+security:
+  - api_token: []
 tags:
-- name: "pet"
-  description: "Everything about your Pets"
-  externalDocs:
-    description: "Find out more"
-    url: "http://swagger.io"
-- name: "store"
-  description: "Access to Petstore orders"
-- name: "user"
-  description: "Operations about user"
-  externalDocs:
-    description: "Find out more about our store"
-    url: "http://swagger.io"
-schemes:
-- "https"
-- "http"
+  - name: OAuth
+    description: Действия с токенами аутентификации
+  - name: Анкета-заявление
+    description: Действия с анкетой-заявлением
+  - name: Оплата
+    description: Действия с оплатой полиса
+  - name: Полис
+    description: Действия с полисами
+  - name: Справочники
+    description: Используемые справочники
 paths:
-  /pet/{petId}/uploadImage:
+  /oauth/token:
     post:
       tags:
-      - "pet"
-      summary: "uploads an image"
-      description: ""
-      operationId: "uploadFile"
-      consumes:
-      - "multipart/form-data"
-      produces:
-      - "application/json"
-      parameters:
-      - name: "petId"
-        in: "path"
-        description: "ID of pet to update"
-        required: true
-        type: "integer"
-        format: "int64"
-      - name: "additionalMetadata"
-        in: "formData"
-        description: "Additional data to pass to server"
-        required: false
-        type: "string"
-      - name: "file"
-        in: "formData"
-        description: "file to upload"
-        required: false
-        type: "file"
+        - OAuth
+      summary: Get an authentication token
+      description: >-
+        Gets an authentication token.
+
+
+        The endpoint is protected with the basic authentication. The request
+        must contain an `Authorization`
+
+        header for basic authentication with REST API client credentials. Please
+        note that client credentials 
+
+        are not the same as the user credentials. Client means an application
+        that uses the REST API.
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              properties:
+                username:
+                  type: string
+                  description: User login
+                  default: admin
+                password:
+                  type: string
+                  description: User password
+                  default: admin
       responses:
-        200:
-          description: "successful operation"
-          schema:
-            $ref: "#/definitions/ApiResponse"
-      security:
-      - petstore_auth:
-        - "write:pets"
-        - "read:pets"
-  /pet:
+        '200':
+          description: Successfully authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/token'
+        '400':
+          description: Authentication failed, e.g. because of invalid username or password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error'
+        '401':
+          description: Basic authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error'
+  /oauth/revoke:
     post:
       tags:
-      - "pet"
-      summary: "Add a new pet to the store"
-      description: ""
-      operationId: "addPet"
-      consumes:
-      - "application/json"
-      - "application/xml"
-      produces:
-      - "application/json"
-      - "application/xml"
-      parameters:
-      - in: "body"
-        name: "body"
-        description: "Pet object that needs to be added to the store"
-        required: true
-        schema:
-          $ref: "#/definitions/Pet"
+        - OAuth
+      summary: Revoke an authentication token
+      description: >
+        Revokes an authentication token. The endpoint is protected with the
+        basic authentication. The request must
+
+        contain an `Authorization` header for basic authentication with REST API
+        client credentials. See the `/oauth/token`
+
+        endpoint documentation for more details.
+
+        When the refresh token is revoked, the corresponding access token is
+        also revoked.
+
+        When the access token is revoked, the corresponding refresh token is
+        also revoked.
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              properties:
+                token:
+                  type: string
+                  description: The token to be revoked.
       responses:
-        405:
-          description: "Invalid input"
-      security:
-      - petstore_auth:
-        - "write:pets"
-        - "read:pets"
+        '200':
+          description: Success
+          content: {}
+  /application:
+    post:
+      tags:
+        - Анкета-заявление
+      summary: Добавление новой анкеты-заявления
+      description: Добавление новой анкеты-заявления
+      requestBody:
+        description: Добавление новой анкеты-заявления
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/application'
+        required: true
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/applicationResponse'
+        '400':
+          $ref: '#/components/responses/400'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '405':
+          $ref: '#/components/responses/405'
+        '422':
+          $ref: '#/components/responses/422'
     put:
       tags:
-      - "pet"
-      summary: "Update an existing pet"
-      description: ""
-      operationId: "updatePet"
-      consumes:
-      - "application/json"
-      - "application/xml"
-      produces:
-      - "application/json"
-      - "application/xml"
-      parameters:
-      - in: "body"
-        name: "body"
-        description: "Pet object that needs to be added to the store"
+        - Анкета-заявление
+      summary: Редактирование анкеты-заявления
+      description: Редактирование анкеты-заявления
+      requestBody:
+        description: Редактирование анкеты-заявления
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  properties:
+                    id:
+                      type: string
+                      description: ID анкеты-заявления
+                      format: UUID
+                      example: 1c39ac76-b7ca-486f-ac12-b88a34e6ad03
+                - $ref: '#/components/schemas/application'
         required: true
-        schema:
-          $ref: "#/definitions/Pet"
       responses:
-        400:
-          description: "Invalid ID supplied"
-        404:
-          description: "Pet not found"
-        405:
-          description: "Validation exception"
-      security:
-      - petstore_auth:
-        - "write:pets"
-        - "read:pets"
-  /pet/findByStatus:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/applicationResponse'
+        '400':
+          $ref: '#/components/responses/400'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '405':
+          $ref: '#/components/responses/405'
+        '422':
+          $ref: '#/components/responses/422'
+  /application/{applicationId}:
     get:
       tags:
-      - "pet"
-      summary: "Finds Pets by status"
-      description: "Multiple status values can be provided with comma separated strings"
-      operationId: "findPetsByStatus"
-      produces:
-      - "application/json"
-      - "application/xml"
+        - Анкета-заявление
+      summary: Поиск анкеты-заявления по ID
+      description: Поиск анкеты-заявления по ID
       parameters:
-      - name: "status"
-        in: "query"
-        description: "Status values that need to be considered for filter"
-        required: true
-        type: "array"
-        items:
-          type: "string"
+        - name: applicationId
+          in: path
+          description: ID анкеты-заявления
+          required: true
+          schema:
+            type: string
+            format: UUID
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/application'
+                  - $ref: '#/components/schemas/applicationResponse'
+        '400':
+          $ref: '#/components/responses/400'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '405':
+          $ref: '#/components/responses/405'
+        '422':
+          $ref: '#/components/responses/422'
+    delete:
+      tags:
+        - Анкета-заявление
+      summary: Удаление анкеты-заявления по ID
+      description: Удаление анкеты-заявления по ID
+      parameters:
+        - name: applicationId
+          in: path
+          description: ID анкеты-заявления
+          required: true
+          schema:
+            type: string
+            format: UUID
+      responses:
+        '200':
+          $ref: '#/components/responses/200'
+        '400':
+          $ref: '#/components/responses/400'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '405':
+          $ref: '#/components/responses/405'
+        '422':
+          $ref: '#/components/responses/422'
+  /payment:
+    post:
+      tags:
+        - Оплата
+      summary: Подтверждение оплаты
+      description: Подтверждение оплаты
+      requestBody:
+        description: Подтверждение оплаты
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                applicationId:
+                  type: string
+                  description: ID анкеты-заявления
+                  format: UUID
+                  example: 1c39ac76-b7ca-486f-ac12-b88a34e6ad03
+                paymentAmount:
+                  type: number
+                  description: Сумма оплаты
+                  format: double
+                  example: 1000000.5
+                paymentDate:
+                  type: string
+                  description: Дата оплаты
+                  format: date
+                  example: 01.01.2024
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  applicationId:
+                    type: string
+                    description: ID анкеты-заявления
+                    format: UUID
+                    example: 1c39ac76-b7ca-486f-ac12-b88a34e6ad03
+                  invoiceNumber:
+                    type: string
+                    description: Номер инвойса
+                    maxLength: 20
+                    example: ABC123
+                  insurancePremium:
+                    type: number
+                    description: Страховая премия
+                    format: double
+                    example: 1000000.5
+                  paidPremium:
+                    type: number
+                    description: Оплаченная премия
+                    format: double
+                    example: 1000000.5
+                  paymentStatus:
+                    type: string
+                    description: Статус оплаты
+                    maxLength: 50
+                    example: Полностью оплачено
+        '400':
+          $ref: '#/components/responses/400'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '405':
+          $ref: '#/components/responses/405'
+        '422':
+          $ref: '#/components/responses/422'
+  /paymentCancel:
+    post:
+      tags:
+        - Оплата
+      summary: Отмена оплаты
+      description: Отмена оплаты
+      requestBody:
+        description: Отмена оплаты
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                applicationId:
+                  type: string
+                  description: ID анкеты-заявления
+                  format: UUID
+                  example: 1c39ac76-b7ca-486f-ac12-b88a34e6ad03
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  applicationId:
+                    type: string
+                    description: ID анкеты-заявления
+                    format: UUID
+                    example: 1c39ac76-b7ca-486f-ac12-b88a34e6ad03
+                  invoiceNumber:
+                    type: string
+                    description: Номер инвойса
+                    maxLength: 20
+                    example: ABC123
+                  insurancePremium:
+                    type: number
+                    description: Страховая премия
+                    format: double
+                    example: 1000000.5
+                  paidPremium:
+                    type: number
+                    description: Оплаченная премия
+                    format: double
+                    example: 0
+                  paymentStatus:
+                    type: string
+                    description: Статус оплаты
+                    maxLength: 50
+                    example: Не оплачено
+        '400':
+          $ref: '#/components/responses/400'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '405':
+          $ref: '#/components/responses/405'
+        '422':
+          $ref: '#/components/responses/422'
+  /payment/{applicationId}:
+    get:
+      tags:
+        - Оплата
+      summary: Проверка оплаты по ID анкеты-заявления
+      description: Проверка оплаты по ID анкеты-заявления
+      parameters:
+        - name: applicationId
+          in: path
+          description: ID анкеты-заявления
+          required: true
+          schema:
+            type: string
+            format: UUID
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  applicationId:
+                    type: string
+                    description: ID анкеты-заявления
+                    format: UUID
+                    example: 1c39ac76-b7ca-486f-ac12-b88a34e6ad03
+                  invoiceNumber:
+                    type: string
+                    description: Номер инвойса
+                    maxLength: 20
+                    example: ABC123
+                  insurancePremium:
+                    type: number
+                    description: Страховая премия
+                    format: double
+                    example: 1000000.5
+                  paidPremium:
+                    type: number
+                    description: Оплаченная премия
+                    format: double
+                    example: 50000.5
+                  payments:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        paymentAmount:
+                          type: number
+                          description: Сумма оплаты
+                          format: double
+                          example: 50000.5
+                        paymentDate:
+                          type: string
+                          description: Дата оплаты
+                          format: date
+                          example: 01.01.2024
+                  paymentStatus:
+                    type: string
+                    description: Статус оплаты
+                    maxLength: 50
+                    example: Не оплачено
+        '400':
+          $ref: '#/components/responses/400'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '405':
+          $ref: '#/components/responses/405'
+        '422':
+          $ref: '#/components/responses/422'
+  /policy:
+    post:
+      tags:
+        - Полис
+      summary: Запрос выдачи полиса
+      description: Запрос выдачи полиса
+      requestBody:
+        description: Запрос выдачи полиса
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                applicationId:
+                  type: string
+                  description: ID анкеты-заявления
+                  format: UUID
+                  example: 1c39ac76-b7ca-486f-ac12-b88a34e6ad03
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  applicationId:
+                    type: string
+                    description: ID анкеты-заявления
+                    format: UUID
+                    example: 1c39ac76-b7ca-486f-ac12-b88a34e6ad03
+                  policySeries:
+                    type: string
+                    description: Серия полиса
+                    maxLength: 32
+                    example: ABC
+                  policyNumber:
+                    type: string
+                    description: Номер полиса
+                    maxLength: 32
+                    example: A000123
+                  policyIssueDate:
+                    type: string
+                    description: Дата выдачи полиса
+                    format: date
+                    example: 01.01.2024
+                  policyURL:
+                    type: string
+                    description: URL полиса
+                    maxLength: 100
+                    example: localhost/policies/A000123
+        '400':
+          $ref: '#/components/responses/400'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '405':
+          $ref: '#/components/responses/405'
+        '422':
+          $ref: '#/components/responses/422'
+  /policyFile:
+    post:
+      tags:
+        - Полис
+      summary: Запрос файла полиса
+      description: Запрос файла полиса
+      requestBody:
+        description: Запрос файла полиса
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                applicationId:
+                  type: string
+                  description: ID анкеты-заявления
+                  format: UUID
+                  example: 1c39ac76-b7ca-486f-ac12-b88a34e6ad03
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  applicationId:
+                    type: string
+                    description: ID анкеты-заявления
+                    format: UUID
+                    example: 1c39ac76-b7ca-486f-ac12-b88a34e6ad03
+                  policyFile:
+                    type: string
+                    format: byte
+                    description: Файл полиса - Base64
+        '400':
+          $ref: '#/components/responses/400'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '405':
+          $ref: '#/components/responses/405'
+        '422':
+          $ref: '#/components/responses/422'
+  /policy/{applicationId}:
+    get:
+      tags:
+        - Полис
+      summary: Запрос данных о полисе по ID анкеты-заявления
+      description: Запрос данных о полисе по ID анкеты-заявления
+      parameters:
+        - name: applicationId
+          in: path
+          description: ID анкеты-заявления
+          required: true
+          schema:
+            type: string
+            format: UUID
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  applicationId:
+                    type: string
+                    description: ID анкеты-заявления
+                    format: UUID
+                    example: 1c39ac76-b7ca-486f-ac12-b88a34e6ad03
+                  policySeries:
+                    type: string
+                    description: Серия полиса
+                    maxLength: 32
+                    example: ABC
+                  policyNumber:
+                    type: string
+                    description: Номер полиса
+                    maxLength: 32
+                    example: A000123
+                  policyIssueDate:
+                    type: string
+                    description: Дата выдачи полиса
+                    format: date
+                    example: 01.01.2024
+                  policyURL:
+                    type: string
+                    description: URL полиса
+                    maxLength: 100
+                    example: localhost/policies/A000123
+        '400':
+          $ref: '#/components/responses/400'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '405':
+          $ref: '#/components/responses/405'
+        '422':
+          $ref: '#/components/responses/422'
+  /refResident:
+    get:
+      tags:
+        - Справочники
+      summary: Справочник - резидентность
+      description: Справочник - резидентность
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  refId:
+                    type: integer
+                    description: ID справочника
+                    example: 1
+                  nameRus:
+                    type: string
+                    description: Элемент (рус.)
+                    maxLength: 255
+                    example: АБВ
+                  nameUzbCyr:
+                    type: string
+                    description: Элемент (узб., кир.)
+                    maxLength: 255
+                    example: АБВ
+                  nameUzbLat:
+                    type: string
+                    description: Элемент (узб., лат.)
+                    maxLength: 255
+                    example: ABV
+        '400':
+          $ref: '#/components/responses/400'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '405':
+          $ref: '#/components/responses/405'
+        '422':
+          $ref: '#/components/responses/422'
+  /refRegion:
+    get:
+      tags:
+        - Справочники
+      summary: Справочник - регионы
+      description: Справочник - регионы
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  refId:
+                    type: integer
+                    description: ID справочника
+                    example: 1
+                  nameRus:
+                    type: string
+                    description: Элемент (рус.)
+                    maxLength: 255
+                    example: АБВ
+                  nameUzbCyr:
+                    type: string
+                    description: Элемент (узб., кир.)
+                    maxLength: 255
+                    example: АБВ
+                  nameUzbLat:
+                    type: string
+                    description: Элемент (узб., лат.)
+                    maxLength: 255
+                    example: ABV
+        '400':
+          $ref: '#/components/responses/400'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '405':
+          $ref: '#/components/responses/405'
+        '422':
+          $ref: '#/components/responses/422'
+  /refDistrict:
+    get:
+      tags:
+        - Справочники
+      summary: Справочник - районы
+      description: Справочник - районы
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  refId:
+                    type: integer
+                    description: ID справочника
+                    example: 1
+                  nameRus:
+                    type: string
+                    description: Элемент (рус.)
+                    maxLength: 255
+                    example: АБВ
+                  nameUzbCyr:
+                    type: string
+                    description: Элемент (узб., кир.)
+                    maxLength: 255
+                    example: АБВ
+                  nameUzbLat:
+                    type: string
+                    description: Элемент (узб., лат.)
+                    maxLength: 255
+                    example: ABV
+        '400':
+          $ref: '#/components/responses/400'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '405':
+          $ref: '#/components/responses/405'
+        '422':
+          $ref: '#/components/responses/422'
+  /refCountry:
+    get:
+      tags:
+        - Справочники
+      summary: Справочник - страны
+      description: Справочник - страны
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  refId:
+                    type: integer
+                    description: ID справочника
+                    example: 1
+                  nameRus:
+                    type: string
+                    description: Элемент (рус.)
+                    maxLength: 255
+                    example: АБВ
+                  nameUzbCyr:
+                    type: string
+                    description: Элемент (узб., кир.)
+                    maxLength: 255
+                    example: АБВ
+                  nameUzbLat:
+                    type: string
+                    description: Элемент (узб., лат.)
+                    maxLength: 255
+                    example: ABV
+        '400':
+          $ref: '#/components/responses/400'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '405':
+          $ref: '#/components/responses/405'
+        '422':
+          $ref: '#/components/responses/422'
+  /refCarType:
+    get:
+      tags:
+        - Справочники
+      summary: Справочник - виды ТС
+      description: Справочник - виды ТС
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  refId:
+                    type: integer
+                    description: ID справочника
+                    example: 1
+                  nameRus:
+                    type: string
+                    description: Элемент (рус.)
+                    maxLength: 255
+                    example: АБВ
+                  nameUzbCyr:
+                    type: string
+                    description: Элемент (узб., кир.)
+                    maxLength: 255
+                    example: АБВ
+                  nameUzbLat:
+                    type: string
+                    description: Элемент (узб., лат.)
+                    maxLength: 255
+                    example: ABV
+        '400':
+          $ref: '#/components/responses/400'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '405':
+          $ref: '#/components/responses/405'
+        '422':
+          $ref: '#/components/responses/422'
+  /refPropertyClassificationType:
+    get:
+      tags:
+        - Справочники
+      summary: Справочник - классификация строений
+      description: Справочник - классификация строений
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  refId:
+                    type: integer
+                    description: ID справочника
+                    example: 1
+                  nameRus:
+                    type: string
+                    description: Элемент (рус.)
+                    maxLength: 255
+                    example: АБВ
+                  nameUzbCyr:
+                    type: string
+                    description: Элемент (узб., кир.)
+                    maxLength: 255
+                    example: АБВ
+                  nameUzbLat:
+                    type: string
+                    description: Элемент (узб., лат.)
+                    maxLength: 255
+                    example: ABV
+        '400':
+          $ref: '#/components/responses/400'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '405':
+          $ref: '#/components/responses/405'
+        '422':
+          $ref: '#/components/responses/422'
+  /refPropertyRightType:
+    get:
+      tags:
+        - Справочники
+      summary: Справочник - виды права на земельный участок
+      description: Справочник - виды права на земельный участок
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  refId:
+                    type: integer
+                    description: ID справочника
+                    example: 1
+                  nameRus:
+                    type: string
+                    description: Элемент (рус.)
+                    maxLength: 255
+                    example: АБВ
+                  nameUzbCyr:
+                    type: string
+                    description: Элемент (узб., кир.)
+                    maxLength: 255
+                    example: АБВ
+                  nameUzbLat:
+                    type: string
+                    description: Элемент (узб., лат.)
+                    maxLength: 255
+                    example: ABV
+        '400':
+          $ref: '#/components/responses/400'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '405':
+          $ref: '#/components/responses/405'
+        '422':
+          $ref: '#/components/responses/422'
+  /refAgriculturalObjectType:
+    get:
+      tags:
+        - Справочники
+      summary: Справочник - виды объектов сельхозназначения
+      description: Справочник - виды объектов сельхозназначения
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  refId:
+                    type: integer
+                    description: ID справочника
+                    example: 1
+                  nameRus:
+                    type: string
+                    description: Элемент (рус.)
+                    maxLength: 255
+                    example: АБВ
+                  nameUzbCyr:
+                    type: string
+                    description: Элемент (узб., кир.)
+                    maxLength: 255
+                    example: АБВ
+                  nameUzbLat:
+                    type: string
+                    description: Элемент (узб., лат.)
+                    maxLength: 255
+                    example: ABV
+        '400':
+          $ref: '#/components/responses/400'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '405':
+          $ref: '#/components/responses/405'
+        '422':
+          $ref: '#/components/responses/422'
+  /refMeasurementType:
+    get:
+      tags:
+        - Справочники
+      summary: Справочник - виды единиц измерения
+      description: Справочник - виды единиц измерения
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  refId:
+                    type: integer
+                    description: ID справочника
+                    example: 1
+                  nameRus:
+                    type: string
+                    description: Элемент (рус.)
+                    maxLength: 255
+                    example: АБВ
+                  nameUzbCyr:
+                    type: string
+                    description: Элемент (узб., кир.)
+                    maxLength: 255
+                    example: АБВ
+                  nameUzbLat:
+                    type: string
+                    description: Элемент (узб., лат.)
+                    maxLength: 255
+                    example: ABV
+        '400':
+          $ref: '#/components/responses/400'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '405':
+          $ref: '#/components/responses/405'
+        '422':
+          $ref: '#/components/responses/422'
+components:
+  securitySchemes:
+    auth:
+      type: oauth2
+      description: >-
+        Use a global client_id / client_secret and your username / password
+        combo to obtain a token
+      flows:
+        password:
+          tokenUrl: /oauth/v2/token
+          scopes: {}
+      bearerFormat: bearer
+    api_token:
+      type: apiKey
+      description: 'Insert token in format: Bearer [token]'
+      name: Authorization
+      in: header
+  schemas:
+    error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+        details:
+          type: string
+          description: Detailed error description
+    token:
+      type: object
+      properties:
+        access_token:
+          type: string
+          example: ead2bcb0-6fed-42ec-8a8f-c3196d038d8b
+        refresh_token:
+          type: string
+          example: fd00550e-5bb0-41b6-89d6-57bbfb6732a1
+        expires_in:
+          type: string
+          example: '3600'
+    application:
+      type: object
+      required:
+        - applicationNumber
+        - applicationDate
+        - contractNumber
+        - contractDate
+        - productCode
+        - insurant
+        - hasBeneficiary
+        - beneficiary
+        - hasPledgor
+        - insuranceCoverages
+        - premiumCurrency
+        - liabilityCurrency
+        - insuranceTerritory
+        - insuredObjects
+      properties:
+        applicationNumber:
+          type: string
+          description: Номер анкеты-заявления
+          maxLength: 32
+          example: A0123
+        applicationDate:
+          type: string
+          description: Дата анкеты-заявления
+          format: date
+          example: 01.01.2024
+        contractNumber:
+          type: string
+          description: Номер договора / ген.соглашения
+          maxLength: 32
+          example: A0123
+        contractDate:
+          type: string
+          description: Дата договора / ген.соглашения
+          format: date
+          example: 01.01.2024
+        promoCode:
+          type: string
+          description: Промо-код
+          format: UUID
+          example: 1c39ac76-b7ca-486f-ac12-b88a34e6ad03
+        productCode:
+          type: integer
+          description: Код страхового продукта
+          example: 1
+        insurant:
+          $ref: '#/components/schemas/counterparty'
+        hasBeneficiary:
+          type: integer
+          description: Предусмотрен Выгодоприобретатель (0 - нет, 1 - да)
+          example: 1
+        beneficiary:
+          $ref: '#/components/schemas/counterparty'
+        hasPledgor:
+          type: integer
+          description: Предусмотрен Залогодатель (0 - нет, 1 - да)
+          example: 1
+        creditContractNumber:
+          type: string
+          description: Номер кредитного договора
+          maxLength: 32
+          example: A0123
+        creditContractDate:
+          type: string
+          description: Дата кредитного договора
+          format: date
+          example: 01.01.2024
+        creditPeriodStart:
+          type: string
+          description: Дата начала периода кредитования
+          format: date
+          example: 01.01.2024
+        creditPeriodEnd:
+          type: string
+          description: Дата окончания периода кредитования
+          format: date
+          example: 31.12.2024
+        creditAmount:
+          type: number
+          description: Сумма кредита
+          format: double
+          example: 1000000.5
+        creditPurpose:
+          type: string
+          description: Цель кредита
+          maxLength: 255
+          example: Предпринимательство
+        insuranceCoverages:
+          type: array
+          description: Детали страхового покрытия по продуктам
+          items:
+            type: object
+            properties:
+              productCode:
+                type: integer
+                description: Код страхового продукта (в составе основного продукта)
+                example: 1
+              insuredValue:
+                type: number
+                description: Страховая стоимость
+                format: double
+                example: 1000000000.5
+              insuredSum:
+                type: number
+                description: Страховая сумма
+                format: double
+                example: 600000000.5
+              requestedRate:
+                type: number
+                description: Предлагаемый годовой страховой тариф (в %)
+                format: double
+                example: 1.2
+              insuredPeriodStart:
+                type: string
+                description: Дата начала периода страхования
+                format: date
+                example: 01.01.2024
+              insuredPeriodEnd:
+                type: string
+                description: Дата окончания периода страхования
+                format: date
+                example: 31.12.2024
+        premiumCurrency:
+          type: string
+          description: Валюта страховой премии
+          maxLength: 5
+          example: UZS
+        liabilityCurrency:
+          type: string
+          description: Валюта ответственности
+          maxLength: 5
+          example: UZS
+        insuranceTerritory:
+          type: string
+          description: Территория страхования
+          maxLength: 50
+          example: Узбекистан
+        insuredObjects:
+          type: array
+          description: Объекты страхования
+          items:
+            $ref: '#/components/schemas/insuredObject'
+    insuredObject:
+      type: object
+      required:
+        - objectType
+        - info
+        - pledgor
+      properties:
+        objectType:
+          type: string
+          description: Тип объекта страхования
           enum:
-          - "available"
-          - "pending"
-          - "sold"
-          default: "available"
-        collectionFormat: "multi"
-      responses:
-        200:
-          description: "successful operation"
+            - BORROWER
+            - VEHICLE
+            - PROPERTY
+            - AGRICULTURE
+            - OTHEROBJECT
+          example: BORROWER
+        info:
+          discriminator:
+            propertyName: objectType
+            mapping:
+              BORROWER: '#/components/schemas/counterparty'
+              VEHICLE: '#/components/schemas/vehicle'
+              PROPERTY: '#/components/schemas/property'
+              AGRICULTURE: '#/components/schemas/agriculture'
+              OTHER_OBJECT: '#/components/schemas/otherObject'
+          oneOf:
+            - $ref: '#/components/schemas/counterparty'
+            - $ref: '#/components/schemas/vehicle'
+            - $ref: '#/components/schemas/property'
+            - $ref: '#/components/schemas/agriculture'
+            - $ref: '#/components/schemas/otherObject'
+        pledgor:
+          $ref: '#/components/schemas/counterparty'
+    vehicle:
+      type: object
+      description: Транспортное средство
+      required:
+        - residency
+        - registrationNumber
+        - carMake
+        - carModel
+        - carType
+        - manufactureYear
+        - bodyNumber
+        - cargoCapacity
+        - seatNumber
+        - techPassportSeries
+        - techPassportNumber
+      properties:
+        residency:
+          type: integer
+          description: Принадлежит резиденту (/refResident)
+          example: 1
+        registrationNumber:
+          type: string
+          description: Регистрационный номер
+          maxLength: 16
+          example: 01A111AA
+        carMake:
+          type: string
+          description: Марка ТС
+          maxLength: 32
+          example: GM
+        carModel:
+          type: string
+          description: Модель ТС
+          maxLength: 32
+          example: Gentra
+        carType:
+          type: integer
+          description: Вид ТС (/refCarType)
+          example: 1
+        manufactureYear:
+          type: integer
+          description: Год выпуска
+          example: 2023
+        bodyNumber:
+          type: string
+          description: Номер кузова
+          maxLength: 32
+          example: 0123ABC
+        engineNumber:
+          type: string
+          description: Номер двигателя
+          maxLength: 32
+          example: 0123ABC
+        cargoCapacity:
+          type: integer
+          description: Грузоподъемность
+          example: 1000
+        seatNumber:
+          type: integer
+          description: Количество мест сидения
+          example: 5
+        techPassportSeries:
+          type: string
+          description: Серия тех.паспорта
+          maxLength: 32
+          example: AAC
+        techPassportNumber:
+          type: string
+          description: Номер тех.паспорта
+          maxLength: 32
+          example: '1234567'
+    property:
+      type: object
+      description: Имущество
+      required:
+        - ownerResidency
+        - cadastralNumber
+        - cadastralDocDate
+        - propertyClassification
+        - countryCode
+        - regionCode
+        - districtCode
+        - address
+      properties:
+        propertyRightType:
+          type: integer
+          description: Тип права владения (/refPropertyRightType)
+          example: 1
+        ownerResidency:
+          type: integer
+          description: Принадлежит резиденту (/refResident)
+          example: 1
+        cadastralNumber:
+          type: string
+          description: Кадастровый номер
+          maxLength: 32
+          example: '1234567890'
+        cadastralDocDate:
+          type: string
+          description: Дата кадастрового документа
+          format: date
+          example: 01.01.2024
+        propertyClassification:
+          type: integer
+          description: Тип имущества (/refPropertyClassificationType)
+          example: 1
+        propertyDescription:
+          type: string
+          description: Описание имущества
+          maxLength: 32
+          example: Описание объекта имущества
+        countryCode:
+          type: integer
+          description: Страна (/refCountry)
+          example: 1
+        regionCode:
+          type: integer
+          description: Регион (/refRegion)
+          example: 1
+        districtCode:
+          type: integer
+          description: Район (/refDistrict)
+          example: 1
+        postcode:
+          type: string
+          description: Почтовый индекс
+          maxLength: 10
+          example: '100000'
+        address:
+          type: string
+          description: Адрес имущества
+          maxLength: 255
+          example: Адрес объекта имущества
+    agriculture:
+      type: object
+      description: Объект сельхозназначения
+      required:
+        - ownerResidency
+        - agriculturalObjectType
+        - objectName
+        - measurementType
+        - insuranceVolume
+        - countryCode
+        - regionCode
+        - districtCode
+        - address
+      properties:
+        ownerResidency:
+          type: integer
+          description: Принадлежит резиденту (/refResident)
+          example: 1
+        agriculturalObjectType:
+          type: integer
+          description: Тип имущества (/refAgriculturalObjectType)
+          example: 1
+        objectName:
+          type: string
+          description: Наименование объекта
+          maxLength: 255
+          example: Наименование объекта
+        objectDescription:
+          type: string
+          description: Описание объекта
+          maxLength: 255
+          example: Описание объекта
+        measurementType:
+          type: integer
+          description: Тип измерения (/refMeasurementType)
+          example: 1
+        insuranceVolume:
+          type: string
+          description: Объем страхования
+          maxLength: 64
+          example: 100%
+        countryCode:
+          type: integer
+          description: Страна (/refCountry)
+          example: 1
+        regionCode:
+          type: integer
+          description: Регион (/refRegion)
+          example: 1
+        districtCode:
+          type: integer
+          description: Район (/refDistrict)
+          example: 1
+        postcode:
+          type: string
+          description: Почтовый индекс
+          maxLength: 10
+          example: '100000'
+        address:
+          type: string
+          description: Адрес объекта
+          maxLength: 255
+          example: Адрес объекта
+    otherObject:
+      type: object
+      description: Другое
+      required:
+        - ownerResidency
+        - objectType
+        - objectName
+        - measurementType
+        - insuranceVolume
+        - countryCode
+        - regionCode
+        - districtCode
+        - address
+      properties:
+        ownerResidency:
+          type: integer
+          description: Принадлежит резиденту (/refResident)
+          example: 1
+        objectType:
+          type: integer
+          description: Тип имущества (/refPropertyClassificationType)
+          example: 1
+        objectName:
+          type: string
+          description: Наименование объекта
+          maxLength: 255
+          example: Наименование объекта
+        objectDescription:
+          type: string
+          description: Описание объекта
+          maxLength: 255
+          example: Описание объекта
+        measurementType:
+          type: integer
+          description: Тип измерения (/refMeasurementType)
+          example: 1
+        insuranceVolume:
+          type: string
+          description: Объем страхования
+          maxLength: 64
+          example: 100%
+        countryCode:
+          type: integer
+          description: Страна (/refCountry)
+          example: 1
+        regionCode:
+          type: integer
+          description: Регион (/refRegion)
+          example: 1
+        districtCode:
+          type: integer
+          description: Район (/refDistrict)
+          example: 1
+        postcode:
+          type: string
+          description: Почтовый индекс
+          maxLength: 10
+          example: '100000'
+        address:
+          type: string
+          description: Адрес объекта
+          maxLength: 255
+          example: Адрес объекта
+    counterparty:
+      type: object
+      description: Контрагент
+      required:
+        - status
+        - info
+        - phone
+      properties:
+        status:
+          type: string
+          description: Тип
+          enum:
+            - PERSON
+            - COMPANY
+          example: PERSON
+        info:
+          discriminator:
+            propertyName: status
+            mapping:
+              PERSON: '#/components/schemas/person'
+              COMPANY: '#/components/schemas/company'
+          oneOf:
+            - $ref: '#/components/schemas/person'
+            - $ref: '#/components/schemas/company'
+        phone:
+          type: string
+          description: Номер телефона
+          maxLength: 12
+          example: '998901234567'
+        bankAccount:
+          type: string
+          description: Расчетный счет
+          maxLength: 25
+          example: '12345678901234567890'
+        bankCode:
+          type: string
+          description: МФО банка
+          maxLength: 5
+          example: '01234'
+        bankName:
+          type: string
+          description: Наименование банка
+          maxLength: 100
+          example: Abcde
+        bankTaxpayerNumber:
+          type: string
+          description: ИНН банка
+          maxLength: 9
+          example: '123456789'
+    person:
+      type: object
+      description: Физическое лицо
+      required:
+        - firstName
+        - middleName
+        - lastName
+        - birthDate
+        - personalIdentificationNumber
+        - passportNumber
+      properties:
+        firstName:
+          type: string
+          description: Имя
+          maxLength: 32
+          example: Иван
+        middleName:
+          type: string
+          description: Отчество
+          maxLength: 32
+          example: Иванович
+        lastName:
+          type: string
+          description: Фамилия
+          maxLength: 32
+          example: Иванов
+        birthDate:
+          type: string
+          description: Дата рождения
+          format: date
+          example: 01.01.1980
+        personalIdentificationNumber:
+          type: string
+          description: ПИНФЛ
+          maxLength: 14
+          example: '30105678901234'
+        passportNumber:
+          type: string
+          description: Серия и номер паспорта
+          maxLength: 20
+          example: AA1234567
+        cardNumber:
+          type: string
+          description: Номер пластиковой карты
+          maxLength: 16
+          example: '8600123456789012'
+        personalAccount:
+          type: string
+          description: Лицевой счет
+          maxLength: 25
+          example: '12345678901234567890'
+    company:
+      type: object
+      description: Юридическое лицо
+      required:
+        - name
+        - taxpayerNumber
+      properties:
+        name:
+          type: string
+          description: Наименование
+          maxLength: 255
+          example: Компания
+        taxpayerNumber:
+          type: string
+          description: ИНН
+          maxLength: 9
+          example: '123456789'
+    applicationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID
+          format: UUID
+          example: 76425683-d2af-4d7d-815a-ecd425b91695
+        insurancePremium:
+          type: number
+          description: Страховая премия
+          format: double
+          example: 1000000.5
+        sumInsured:
+          type: number
+          description: Страховая сумма
+          format: double
+          example: 100000000.5
+        invoiceNumber:
+          type: string
+          description: Номер инвойса
+          maxLength: 20
+          example: '12345'
+  responses:
+    '200':
+      description: Успешно
+      content: {}
+    '400':
+      description: Bad Request
+      content:
+        application/json:
           schema:
-            type: "array"
-            items:
-              $ref: "#/definitions/Pet"
-        400:
-          description: "Invalid status value"
-      security:
-      - petstore_auth:
-        - "write:pets"
-        - "read:pets"
-  /pet/findByTags:
-    get:
-      tags:
-      - "pet"
-      summary: "Finds Pets by tags"
-      description: "Multiple tags can be provided with comma separated strings. Use\
-        \ tag1, tag2, tag3 for testing."
-      operationId: "findPetsByTags"
-      produces:
-      - "application/json"
-      - "application/xml"
-      parameters:
-      - name: "tags"
-        in: "query"
-        description: "Tags to filter by"
-        required: true
-        type: "array"
-        items:
-          type: "string"
-        collectionFormat: "multi"
-      responses:
-        200:
-          description: "successful operation"
+            $ref: '#/components/schemas/error'
+    '403':
+      description: Forbidden
+      content:
+        application/json:
           schema:
-            type: "array"
-            items:
-              $ref: "#/definitions/Pet"
-        400:
-          description: "Invalid tag value"
-      security:
-      - petstore_auth:
-        - "write:pets"
-        - "read:pets"
-      deprecated: true
-  /pet/{petId}:
-    get:
-      tags:
-      - "pet"
-      summary: "Find pet by ID"
-      description: "Returns a single pet"
-      operationId: "getPetById"
-      produces:
-      - "application/json"
-      - "application/xml"
-      parameters:
-      - name: "petId"
-        in: "path"
-        description: "ID of pet to return"
-        required: true
-        type: "integer"
-        format: "int64"
-      responses:
-        200:
-          description: "successful operation"
+            $ref: '#/components/schemas/error'
+    '404':
+      description: Not found
+      content:
+        application/json:
           schema:
-            $ref: "#/definitions/Pet"
-        400:
-          description: "Invalid ID supplied"
-        404:
-          description: "Pet not found"
-      security:
-      - api_key: []
-    post:
-      tags:
-      - "pet"
-      summary: "Updates a pet in the store with form data"
-      description: ""
-      operationId: "updatePetWithForm"
-      consumes:
-      - "application/x-www-form-urlencoded"
-      produces:
-      - "application/json"
-      - "application/xml"
-      parameters:
-      - name: "petId"
-        in: "path"
-        description: "ID of pet that needs to be updated"
-        required: true
-        type: "integer"
-        format: "int64"
-      - name: "name"
-        in: "formData"
-        description: "Updated name of the pet"
-        required: false
-        type: "string"
-      - name: "status"
-        in: "formData"
-        description: "Updated status of the pet"
-        required: false
-        type: "string"
-      responses:
-        405:
-          description: "Invalid input"
-      security:
-      - petstore_auth:
-        - "write:pets"
-        - "read:pets"
-    delete:
-      tags:
-      - "pet"
-      summary: "Deletes a pet"
-      description: ""
-      operationId: "deletePet"
-      produces:
-      - "application/json"
-      - "application/xml"
-      parameters:
-      - name: "api_key"
-        in: "header"
-        required: false
-        type: "string"
-      - name: "petId"
-        in: "path"
-        description: "Pet id to delete"
-        required: true
-        type: "integer"
-        format: "int64"
-      responses:
-        400:
-          description: "Invalid ID supplied"
-        404:
-          description: "Pet not found"
-      security:
-      - petstore_auth:
-        - "write:pets"
-        - "read:pets"
-  /store/order:
-    post:
-      tags:
-      - "store"
-      summary: "Place an order for a pet"
-      description: ""
-      operationId: "placeOrder"
-      consumes:
-      - "application/json"
-      produces:
-      - "application/json"
-      - "application/xml"
-      parameters:
-      - in: "body"
-        name: "body"
-        description: "order placed for purchasing the pet"
-        required: true
-        schema:
-          $ref: "#/definitions/Order"
-      responses:
-        200:
-          description: "successful operation"
+            $ref: '#/components/schemas/error'
+    '405':
+      description: Invalid input
+      content:
+        application/json:
           schema:
-            $ref: "#/definitions/Order"
-        400:
-          description: "Invalid Order"
-  /store/order/{orderId}:
-    get:
-      tags:
-      - "store"
-      summary: "Find purchase order by ID"
-      description: "For valid response try integer IDs with value >= 1 and <= 10.\
-        \ Other values will generated exceptions"
-      operationId: "getOrderById"
-      produces:
-      - "application/json"
-      - "application/xml"
-      parameters:
-      - name: "orderId"
-        in: "path"
-        description: "ID of pet that needs to be fetched"
-        required: true
-        type: "integer"
-        maximum: 10
-        minimum: 1
-        format: "int64"
-      responses:
-        200:
-          description: "successful operation"
+            $ref: '#/components/schemas/error'
+    '422':
+      description: Unprocessable Entity
+      content:
+        application/json:
           schema:
-            $ref: "#/definitions/Order"
-        400:
-          description: "Invalid ID supplied"
-        404:
-          description: "Order not found"
-    delete:
-      tags:
-      - "store"
-      summary: "Delete purchase order by ID"
-      description: "For valid response try integer IDs with positive integer value.\
-        \ Negative or non-integer values will generate API errors"
-      operationId: "deleteOrder"
-      produces:
-      - "application/json"
-      - "application/xml"
-      parameters:
-      - name: "orderId"
-        in: "path"
-        description: "ID of the order that needs to be deleted"
-        required: true
-        type: "integer"
-        minimum: 1
-        format: "int64"
-      responses:
-        400:
-          description: "Invalid ID supplied"
-        404:
-          description: "Order not found"
-  /store/inventory:
-    get:
-      tags:
-      - "store"
-      summary: "Returns pet inventories by status"
-      description: "Returns a map of status codes to quantities"
-      operationId: "getInventory"
-      produces:
-      - "application/json"
-      parameters: []
-      responses:
-        200:
-          description: "successful operation"
-          schema:
-            type: "object"
-            additionalProperties:
-              type: "integer"
-              format: "int32"
-      security:
-      - api_key: []
-  /user/createWithArray:
-    post:
-      tags:
-      - "user"
-      summary: "Creates list of users with given input array"
-      description: ""
-      operationId: "createUsersWithArrayInput"
-      consumes:
-      - "application/json"
-      produces:
-      - "application/json"
-      - "application/xml"
-      parameters:
-      - in: "body"
-        name: "body"
-        description: "List of user object"
-        required: true
-        schema:
-          type: "array"
-          items:
-            $ref: "#/definitions/User"
-      responses:
-        default:
-          description: "successful operation"
-  /user/createWithList:
-    post:
-      tags:
-      - "user"
-      summary: "Creates list of users with given input array"
-      description: ""
-      operationId: "createUsersWithListInput"
-      consumes:
-      - "application/json"
-      produces:
-      - "application/json"
-      - "application/xml"
-      parameters:
-      - in: "body"
-        name: "body"
-        description: "List of user object"
-        required: true
-        schema:
-          type: "array"
-          items:
-            $ref: "#/definitions/User"
-      responses:
-        default:
-          description: "successful operation"
-  /user/{username}:
-    get:
-      tags:
-      - "user"
-      summary: "Get user by user name"
-      description: ""
-      operationId: "getUserByName"
-      produces:
-      - "application/json"
-      - "application/xml"
-      parameters:
-      - name: "username"
-        in: "path"
-        description: "The name that needs to be fetched. Use user1 for testing. "
-        required: true
-        type: "string"
-      responses:
-        200:
-          description: "successful operation"
-          schema:
-            $ref: "#/definitions/User"
-        400:
-          description: "Invalid username supplied"
-        404:
-          description: "User not found"
-    put:
-      tags:
-      - "user"
-      summary: "Updated user"
-      description: "This can only be done by the logged in user."
-      operationId: "updateUser"
-      consumes:
-      - "application/json"
-      produces:
-      - "application/json"
-      - "application/xml"
-      parameters:
-      - name: "username"
-        in: "path"
-        description: "name that need to be updated"
-        required: true
-        type: "string"
-      - in: "body"
-        name: "body"
-        description: "Updated user object"
-        required: true
-        schema:
-          $ref: "#/definitions/User"
-      responses:
-        400:
-          description: "Invalid user supplied"
-        404:
-          description: "User not found"
-    delete:
-      tags:
-      - "user"
-      summary: "Delete user"
-      description: "This can only be done by the logged in user."
-      operationId: "deleteUser"
-      produces:
-      - "application/json"
-      - "application/xml"
-      parameters:
-      - name: "username"
-        in: "path"
-        description: "The name that needs to be deleted"
-        required: true
-        type: "string"
-      responses:
-        400:
-          description: "Invalid username supplied"
-        404:
-          description: "User not found"
-  /user/login:
-    get:
-      tags:
-      - "user"
-      summary: "Logs user into the system"
-      description: ""
-      operationId: "loginUser"
-      produces:
-      - "application/json"
-      - "application/xml"
-      parameters:
-      - name: "username"
-        in: "query"
-        description: "The user name for login"
-        required: true
-        type: "string"
-      - name: "password"
-        in: "query"
-        description: "The password for login in clear text"
-        required: true
-        type: "string"
-      responses:
-        200:
-          description: "successful operation"
-          headers:
-            X-Expires-After:
-              type: "string"
-              format: "date-time"
-              description: "date in UTC when token expires"
-            X-Rate-Limit:
-              type: "integer"
-              format: "int32"
-              description: "calls per hour allowed by the user"
-          schema:
-            type: "string"
-        400:
-          description: "Invalid username/password supplied"
-  /user/logout:
-    get:
-      tags:
-      - "user"
-      summary: "Logs out current logged in user session"
-      description: ""
-      operationId: "logoutUser"
-      produces:
-      - "application/json"
-      - "application/xml"
-      parameters: []
-      responses:
-        default:
-          description: "successful operation"
-  /user:
-    post:
-      tags:
-      - "user"
-      summary: "Create user"
-      description: "This can only be done by the logged in user."
-      operationId: "createUser"
-      consumes:
-      - "application/json"
-      produces:
-      - "application/json"
-      - "application/xml"
-      parameters:
-      - in: "body"
-        name: "body"
-        description: "Created user object"
-        required: true
-        schema:
-          $ref: "#/definitions/User"
-      responses:
-        default:
-          description: "successful operation"
-securityDefinitions:
-  api_key:
-    type: "apiKey"
-    name: "api_key"
-    in: "header"
-  petstore_auth:
-    type: "oauth2"
-    authorizationUrl: "https://petstore.swagger.io/oauth/authorize"
-    flow: "implicit"
-    scopes:
-      read:pets: "read your pets"
-      write:pets: "modify pets in your account"
-definitions:
-  ApiResponse:
-    type: "object"
-    properties:
-      code:
-        type: "integer"
-        format: "int32"
-      type:
-        type: "string"
-      message:
-        type: "string"
-  Category:
-    type: "object"
-    properties:
-      id:
-        type: "integer"
-        format: "int64"
-      name:
-        type: "string"
-    xml:
-      name: "Category"
-  Pet:
-    type: "object"
-    required:
-    - "name"
-    - "photoUrls"
-    properties:
-      id:
-        type: "integer"
-        format: "int64"
-      category:
-        $ref: "#/definitions/Category"
-      name:
-        type: "string"
-        example: "doggie"
-      photoUrls:
-        type: "array"
-        xml:
-          wrapped: true
-        items:
-          type: "string"
-          xml:
-            name: "photoUrl"
-      tags:
-        type: "array"
-        xml:
-          wrapped: true
-        items:
-          xml:
-            name: "tag"
-          $ref: "#/definitions/Tag"
-      status:
-        type: "string"
-        description: "pet status in the store"
-        enum:
-        - "available"
-        - "pending"
-        - "sold"
-    xml:
-      name: "Pet"
-  Tag:
-    type: "object"
-    properties:
-      id:
-        type: "integer"
-        format: "int64"
-      name:
-        type: "string"
-    xml:
-      name: "Tag"
-  Order:
-    type: "object"
-    properties:
-      id:
-        type: "integer"
-        format: "int64"
-      petId:
-        type: "integer"
-        format: "int64"
-      quantity:
-        type: "integer"
-        format: "int32"
-      shipDate:
-        type: "string"
-        format: "date-time"
-      status:
-        type: "string"
-        description: "Order Status"
-        enum:
-        - "placed"
-        - "approved"
-        - "delivered"
-      complete:
-        type: "boolean"
-    xml:
-      name: "Order"
-  User:
-    type: "object"
-    properties:
-      id:
-        type: "integer"
-        format: "int64"
-      username:
-        type: "string"
-      firstName:
-        type: "string"
-      lastName:
-        type: "string"
-      email:
-        type: "string"
-      password:
-        type: "string"
-      phone:
-        type: "string"
-      userStatus:
-        type: "integer"
-        format: "int32"
-        description: "User Status"
-    xml:
-      name: "User"
-externalDocs:
-  description: "Find out more about Swagger"
-  url: "http://swagger.io"
+            $ref: '#/components/schemas/error'
